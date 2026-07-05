@@ -96,6 +96,6 @@ app/server.py          FastAPI routes + SSE
 app/main.py            the threading model (webview/tray/uvicorn)
 app/db.py, hn.py       persistence, Algolia client
 app/static/            the frontend
-spikes/                Phase-0 de-risk scripts (shell/judge/stream)
+spikes/                Phase-0 de-risk spike for the shell threading model
 PROMPTS.md             prompts used to drive the coding agent
 ```
