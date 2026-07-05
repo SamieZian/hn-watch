@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>HN Watch</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div id="app">
+  <aside id="sidebar">
+    <header>
+      <h1><span class="logo">Y</span> HN Watch</h1>
+    </header>
+
+    <section id="monitors-panel">
+      <div class="panel-head">
+        <h2>Monitors</h2>
+        <button id="btn-new-monitor" class="btn small">+ New</button>
+      </div>
+      <ul id="monitor-list"></ul>
+
+      <form id="monitor-form" class="hidden">
+        <input id="mf-name" placeholder="Name (e.g. AI agent launches)" maxlength="80" required>
+        <textarea id="mf-prompt" rows="3" placeholder="What do you care about? e.g. Launches of startups building AI agents" maxlength="2000" required></textarea>
+        <div class="row">
+          <label>Every <input id="mf-interval" type="number" min="1" max="1440" value="30" style="width:4.5em"> min</label>
+          <span class="spacer"></span>
+          <button type="button" id="mf-cancel" class="btn small ghost">Cancel</button>
+          <button type="submit" class="btn small primary">Create</button>
+        </div>
+      </form>
+    </section>
+
+    <footer>
+      <span id="conn-dot" class="dot"></span><span id="conn-label">connecting…</span>
+    </footer>
+  </aside>
+
+  <main id="main">
+    <div id="view-feed">
+      <div class="feed-head"><h2>Feed</h2></div>
+      <div id="feed"></div>
+      <div id="feed-empty" class="empty hidden">
+        <p>No matches yet.</p>
+        <p class="hint">Create a monitor, then hit ▶ to run it now — the first run looks back 24 hours.</p>
+      </div>
+      <button id="btn-more" class="btn ghost hidden">Load older</button>
+    </div>
+
+    <div id="view-run" class="hidden">
+      <div class="run-head">
+        <button id="btn-back" class="btn small ghost">← Feed</button>
+        <div>
+          <h2 id="run-title"></h2>
+          <div id="run-status" class="run-status"></div>
+        </div>
+      </div>
+      <div id="agent-grid"></div>
+      <div id="brief" class="hidden">
+        <h2 class="brief-label">Combined brief</h2>
+        <article id="brief-md" class="md"></article>
+      </div>
+    </div>
+  </main>
+</div>
+<script src="/static/vendor/marked.min.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>
