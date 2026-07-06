@@ -1,5 +1,6 @@
 .venv/
 data/
+INTERVIEW_NOTES.md
 __pycache__/
 *.pyc
 .DS_Store

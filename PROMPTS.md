@@ -1,74 +1,76 @@
-# Prompts used to drive the coding agent
+# How I drove the coding agent
 
-Per the assignment, this logs how the project was driven with a coding agent.
-Tooling: **Claude Code** (interactive session) built the app; the app itself
-uses `claude -p` as its runtime. The session followed a plan-first workflow:
-the agent was given the assignment, asked clarifying questions, produced an
-architecture plan for approval, then implemented phase by phase with
-verification between phases.
+The assignment asks for the prompts used with a coding agent, so here's the
+honest log. I used **Claude Code** interactively. My approach: don't let the
+agent write code until a plan I believed in existed — then let it implement
+phase by phase, verifying each phase against the real app (real HN data, real
+`claude -p` calls, driving the UI in a browser) before moving on.
 
-## 1. Kickoff (planning mode)
+## 1. Kickoff
 
-> *(screenshot of the assignment email)* — `/plan`
+I gave it a screenshot of the assignment email and typed `/plan`.
 
-Claude Code entered plan mode, checked the machine's toolchain (found Rust
-missing, `claude` CLI 2.1.201 present, measured a trivial `claude -p` call at
-~6s / ~$0.13 — which drove the batched-judging design), and asked two
-questions before designing anything.
+Before designing anything it checked my machine (found Rust missing, found
+`claude` CLI 2.1.201) and benchmarked a trivial `claude -p` call: ~6s and
+~$0.13. That single measurement drove the most important design decision —
+one batched judge call per tick, never one call per item.
 
-## 2. Clarifying answers (these shaped the architecture)
+## 2. My clarifying answers (these shaped everything)
 
-Stack choice — the assignment allowed replacing Rust:
+Stack — the assignment allowed replacing Rust:
 
 > **use python and fastapi if required .. make python around ecosystem**
 
-Project location:
+Location:
 
 > **~/Desktop/hn-watch**
 
-## 3. Plan approval
+## 3. The plan
 
-Claude Code produced the full plan (the tables/diagrams now living in
-README.md: pywebview+pystray threading model, shared-semaphore claude runner,
-Algolia source, SQLite schema, 4 fixed swarm angles, phased build order with
-Phase-0 de-risk spikes) and it was approved as-is.
+It came back with the architecture that's now in the README — the
+pywebview/pystray single-Cocoa-loop shell, the shared-semaphore claude
+runner, Algolia over Firebase, the SQLite schema, four fixed swarm angles,
+and a build order that put throwaway de-risk spikes *before* any app code.
+I approved it as-is; the plan doc became the working spec for every phase.
 
-## 4. Implementation phases (agent-driven, no further human prompts)
+## 4. Implementation phases
 
-The approved plan then served as the prompt for each phase:
-
-- **Phase 0 — spikes first.** "Prove the risky parts before app code":
-  pywebview + pystray `run_detached()` + osascript coexistence; a haiku judge
-  call on 5 fake items (which caught haiku wrapping JSON in markdown fences →
-  the 3-stage parser fallback); capturing raw `stream-json` output to a file
-  before writing the parser.
-- **Phase 1 — core pipeline.** db → hn → claude_runner → tick → API/SSE →
-  feed UI. Verified live: real tick judged 25 HN items for $0.03, matched 2;
-  second tick $0.00 and 0 duplicates; restart preserved everything.
+- **Phase 0 — spikes.** Prove the scary parts first: pywebview + pystray
+  `run_detached()` + osascript in one process; a haiku judge call on fake
+  items (this caught haiku wrapping "JSON only please" output in markdown
+  fences → fallback parser); capturing raw `stream-json` lines to a file
+  before writing the parser against guessed schemas.
+- **Phase 1 — core pipeline.** db → hn client → claude runner → tick → API/
+  SSE → feed UI. Verified live: a real tick judged 25 stories for $0.03 and
+  matched 2; the second tick cost $0.00 and produced zero duplicates; a
+  restart preserved monitors and feed.
 - **Phase 2 — shell.** The spike's threading model moved into `app/main.py`.
-- **Phase 3 — swarm.** Verified live: 4 agents streamed 13+ tool events over
-  SSE, finished at different times, synthesis produced the combined brief,
-  total $1.17.
-- **Phase 4 — this file, README, repo.**
+- **Phase 3 — swarm.** Verified live: 4 agents streamed tool-use events over
+  SSE, finished at different times, synthesis produced the combined brief.
+  Total for the run: $1.17.
+- **Phase 4 — README, this file, repo.**
 
-## 5. Notable mid-course corrections
+## 5. Corrections that came up (and who caught them)
 
-- `asyncio.QueueError` doesn't exist → `QueueEmpty/QueueFull` (events.py).
-- pywebview has no `__version__` attribute (shell spike).
-- Frontend bug found by the agent driving the UI in a browser: replaying a
-  finished swarm run reset agent status dots to "running" because `getPane()`
-  clobbered the dot class when called without a status argument.
+- `asyncio.QueueError` doesn't exist → `QueueEmpty`/`QueueFull` (runtime).
+- pywebview has no `__version__` attribute (spike crash).
+- Status dots on a finished swarm run rendered as "running" — caught by
+  actually driving the UI in a browser after building it, not by reading
+  the code.
 
-## 6. Post-build review prompt
+## 6. Post-build review
+
+After everything worked I asked for an audit against the assignment plus
+research into current best practice:
 
 > **make whatever menstioned in assignment have we fixed all of them ? and
 > what are design decision took ? have you did web search what are good
 > practices and design and better one exist and all ?**
 
-This triggered an audit against the assignment plus research into official
-Claude Code headless docs, which produced two upgrades: judge verdicts moved
-from prompt-begged JSON to CLI-enforced `--json-schema` structured output
-(spiked first: schema mode needs `--max-turns 3` for its internal
-StructuredOutput tool call), and hard `--max-budget-usd` caps on every
-invocation. `--bare` was evaluated and rejected (requires API-key auth;
-target machines use subscription OAuth).
+That produced two real upgrades (spiked before adopting): judge verdicts
+moved from prompt-begged JSON to CLI-enforced `--json-schema` structured
+output (needs `--max-turns 3` for its internal StructuredOutput tool call),
+and hard `--max-budget-usd` caps on every invocation. It also evaluated and
+rejected `--bare` (requires API-key auth; my machine uses subscription
+OAuth) and the Agent SDK (better embedding story, but the assignment
+mandates `claude -p`).
