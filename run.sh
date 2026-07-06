@@ -10,7 +10,7 @@ if ! command -v "$PYTHON" >/dev/null; then
   exit 1
 fi
 if ! command -v claude >/dev/null; then
-  echo "error: claude CLI not found — install Claude Code and run 'claude' once to authenticate" >&2
+  echo "error: claude CLI not found. install Claude Code and run 'claude' once to authenticate" >&2
   exit 1
 fi
 

@@ -1,7 +1,7 @@
 """Research swarm: N parallel `claude -p` agents + one synthesis call.
 
 Parallelism is real (asyncio.gather) but throttled by the SAME semaphore the
-monitor ticks use (claude_runner.CLAUDE_SEM) — the two workloads share one
+monitor ticks use (claude_runner.CLAUDE_SEM), so the two workloads share one
 concurrency governor. Failed agents don't sink the run: synthesis proceeds
 with the survivors.
 """
@@ -20,7 +20,7 @@ STORY: {title}
 LINK: {url}
 HN DISCUSSION: {hn_url}
 
-YOUR ANGLE: {angle_name} — {angle_instructions}
+YOUR ANGLE: {angle_name}: {angle_instructions}
 
 Use WebSearch/WebFetch as needed (a handful of lookups, not an exhaustive crawl).
 Then output a markdown section: start with "## {angle_name}", max ~300 words,
@@ -35,7 +35,7 @@ AGENT REPORTS:
 
 Write one cohesive markdown brief:
 # <punchy headline>
-**TL;DR** — 2-3 sentences.
+**TL;DR**: 2-3 sentences.
 ## Key takeaways   (3-5 bullets, the non-obvious stuff)
 <then the strongest material reorganized by theme, not by agent>
 ## Open questions  (2-3 bullets)

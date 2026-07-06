@@ -1,4 +1,4 @@
-"""The shared `claude -p` runtime layer — used by BOTH workloads.
+"""The shared `claude -p` runtime layer, used by BOTH workloads.
 
 Monitor ticks call `run_json` (one one-shot call per tick, judging a batch of
 items). The research swarm calls `run_stream` N times concurrently plus one

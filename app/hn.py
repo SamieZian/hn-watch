@@ -3,7 +3,7 @@
 One request returns fully-hydrated items newer than a timestamp, which is
 exactly the shape a monitor tick needs (the official Firebase API would take
 N+1 requests). Trade-off: Algolia indexing lags the live site by a few
-minutes — irrelevant for a periodic monitor.
+minutes, which is irrelevant for a periodic monitor.
 """
 from dataclasses import dataclass
 from datetime import datetime, timezone

@@ -1,7 +1,7 @@
 """Entrypoint: uvicorn in a background thread, pywebview owning the Cocoa
 main loop, pystray tray attached to the same NSApp via run_detached().
 
-Window close is intercepted and turned into hide — monitors keep ticking with
+Window close is intercepted and turned into hide, so monitors keep ticking with
 the window closed, and the app is reopened (or quit) from the tray icon.
 """
 import logging
