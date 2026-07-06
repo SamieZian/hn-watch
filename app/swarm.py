@@ -82,6 +82,7 @@ async def _run(run_id: int, agent_ids: list[int], item: dict) -> None:
         ),
         model=config.RESEARCH_MODEL,
         parse=False,  # the brief is markdown, not JSON
+        max_budget_usd=config.AGENT_MAX_BUDGET_USD,
     )
     if res.ok:
         db.add_swarm_cost(run_id, res.cost_usd)

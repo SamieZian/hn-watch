@@ -69,16 +69,24 @@ async def run_json(
     model: str = config.JUDGE_MODEL,
     timeout: float = config.JUDGE_TIMEOUT_S,
     parse: bool = True,
+    json_schema: dict | None = None,
+    max_budget_usd: float = config.JUDGE_MAX_BUDGET_USD,
 ) -> ClaudeResult:
-    """One-shot call, no tools (--max-turns 1). Returns envelope result text,
-    JSON-parsed into .data when parse=True."""
+    """One-shot call, no external tools. With json_schema the CLI enforces
+    structured output natively (returned in the envelope's structured_output
+    field); the model needs extra turns for its internal StructuredOutput tool
+    call, so max-turns is 3 in that mode. Without a schema, .data comes from
+    extract_json when parse=True."""
     args = [
         config.CLAUDE_BIN, "-p", prompt,
         "--output-format", "json",
         "--model", model,
-        "--max-turns", "1",
+        "--max-turns", "3" if json_schema else "1",
+        "--max-budget-usd", str(max_budget_usd),
         "--no-session-persistence",
     ]
+    if json_schema is not None:
+        args += ["--json-schema", json.dumps(json_schema)]
     async with CLAUDE_SEM:
         try:
             stdout, stderr, rc = await _spawn(args, timeout)
@@ -92,12 +100,17 @@ async def run_json(
         return ClaudeResult(ok=False, error="unparseable CLI envelope")
     result = ClaudeResult(
         ok=not envelope.get("is_error", False),
-        text=envelope.get("result", ""),
+        text=envelope.get("result", "") or "",
         cost_usd=envelope.get("total_cost_usd", 0.0) or 0.0,
         duration_ms=envelope.get("duration_ms", 0) or 0,
-        error=envelope.get("result") if envelope.get("is_error") else None,
+        error=str(envelope.get("subtype") or "error") if envelope.get("is_error") else None,
     )
-    if result.ok and parse:
+    if result.ok and json_schema is not None:
+        result.data = envelope.get("structured_output")
+        if result.data is None:
+            result.ok = False
+            result.error = "envelope missing structured_output"
+    elif result.ok and parse:
         try:
             result.data = extract_json(result.text)
         except json.JSONDecodeError:
@@ -129,6 +142,7 @@ async def run_stream(
         "--model", model,
         "--allowedTools", *allowed_tools,
         "--max-turns", str(max_turns),
+        "--max-budget-usd", str(config.AGENT_MAX_BUDGET_USD),
         "--no-session-persistence",
     ]
     async with CLAUDE_SEM:

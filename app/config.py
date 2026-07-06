@@ -16,6 +16,8 @@ RESEARCH_MODEL = "sonnet"      # research agents + synthesis
 JUDGE_TIMEOUT_S = 120
 AGENT_TIMEOUT_S = 300
 AGENT_MAX_TURNS = 12
+JUDGE_MAX_BUDGET_USD = 0.25    # hard cap per judge/synthesis call
+AGENT_MAX_BUDGET_USD = 1.00    # hard cap per research agent
 
 # monitors
 MAX_ITEMS_PER_TICK = 25        # cap candidates per judge call (prompt size / cost)

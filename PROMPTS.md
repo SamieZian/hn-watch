@@ -58,3 +58,17 @@ The approved plan then served as the prompt for each phase:
 - Frontend bug found by the agent driving the UI in a browser: replaying a
   finished swarm run reset agent status dots to "running" because `getPane()`
   clobbered the dot class when called without a status argument.
+
+## 6. Post-build review prompt
+
+> **make whatever menstioned in assignment have we fixed all of them ? and
+> what are design decision took ? have you did web search what are good
+> practices and design and better one exist and all ?**
+
+This triggered an audit against the assignment plus research into official
+Claude Code headless docs, which produced two upgrades: judge verdicts moved
+from prompt-begged JSON to CLI-enforced `--json-schema` structured output
+(spiked first: schema mode needs `--max-turns 3` for its internal
+StructuredOutput tool call), and hard `--max-budget-usd` caps on every
+invocation. `--bare` was evaluated and rejected (requires API-key auth;
+target machines use subscription OAuth).

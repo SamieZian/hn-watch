@@ -26,9 +26,28 @@ CANDIDATE ITEMS (JSON array):
 For EACH item decide if it clearly matches the monitor prompt. Be selective:
 when in doubt, mark it not relevant.
 
-Respond with ONLY a JSON array, no prose, no markdown fences:
-[{{"id": <id>, "relevant": true|false, "summary": "<if relevant: 1-2 sentences on what it is and why it matches, max 220 chars; else empty string>"}}]
-Every input id must appear exactly once in the output."""
+Return one verdict per input id (every input id exactly once). For relevant
+items, summary is 1-2 sentences on what it is and why it matches (max 220
+chars); otherwise an empty string."""
+
+JUDGE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "verdicts": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "id": {"type": "integer"},
+                    "relevant": {"type": "boolean"},
+                    "summary": {"type": "string"},
+                },
+                "required": ["id", "relevant", "summary"],
+            },
+        }
+    },
+    "required": ["verdicts"],
+}
 
 
 class MonitorScheduler:
@@ -100,17 +119,15 @@ class MonitorScheduler:
             ]
         )
         res = await claude_runner.run_json(
-            JUDGE_PROMPT.format(monitor_prompt=m["prompt"], items_json=items_json)
+            JUDGE_PROMPT.format(monitor_prompt=m["prompt"], items_json=items_json),
+            json_schema=JUDGE_SCHEMA,
         )
-        if not res.ok or not isinstance(res.data, list):
+        if not res.ok or not isinstance(res.data, dict):
             self._record_error(mid, res.error or "judge returned unexpected shape")
             return
 
         db.add_monitor_cost(mid, res.cost_usd)
-        verdicts = {
-            v["id"]: v for v in res.data
-            if isinstance(v, dict) and "id" in v
-        }
+        verdicts = {v["id"]: v for v in res.data.get("verdicts", [])}
         by_id = {i.hn_id: i for i in fresh}
         new_items = []
         for hn_id, verdict in verdicts.items():

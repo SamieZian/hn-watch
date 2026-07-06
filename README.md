@@ -48,8 +48,9 @@ Both workloads — *one call per tick* and *many calls at once* — go through a
 |---|---|---|
 | used by | monitor ticks, swarm synthesis | swarm research agents |
 | model | haiku (judging) / sonnet (synthesis) | sonnet |
-| tools | none — `--max-turns 1` forbids a tool loop | `--allowedTools WebSearch WebFetch` |
-| output | `--output-format json` envelope, parsed | `stream-json` lines → normalized events → SSE |
+| tools | none external (tight `--max-turns`) | `--allowedTools WebSearch WebFetch` |
+| output | `--output-format json` (+ `--json-schema` for judging) | `stream-json` lines → normalized events → SSE |
+| cost rail | `--max-budget-usd 0.25` | `--max-budget-usd 1.00` per agent |
 
 Both paths acquire the **same global `asyncio.Semaphore(4)`**. That one primitive is the whole answer to "how do you handle one-call-per-tick vs many-at-once": a monitor tick that fires while a 4-agent swarm is running simply queues until a slot frees. Cost from every CLI envelope (`total_cost_usd`) is accumulated per-monitor and per-run and shown in the UI.
 
@@ -57,7 +58,9 @@ Both paths acquire the **same global `asyncio.Semaphore(4)`**. That one primitiv
 
 **Models are split by job**: haiku judges relevance (cheap, fast, no tools), sonnet does research and synthesis (needs reasoning + web tools).
 
-**Failure containment**: the judge prompt demands raw JSON, but haiku still wraps it in markdown fences sometimes (observed during the spike), so parsing falls back raw → fenced → first balanced block. A failed judge call marks the monitor `error` and does *not* mark items seen, so they're re-judged next tick. A failed swarm agent doesn't sink the run — synthesis proceeds with the survivors, and the pane shows the error.
+**Structured output is enforced, not requested.** The judge originally begged the model for raw JSON — and haiku still wrapped it in markdown fences sometimes (observed during the Phase-0 spike), which forced a raw → fenced → balanced-block fallback parser. Claude Code's `--json-schema` flag replaces that: the CLI itself guarantees a schema-valid `structured_output` field (via an internal StructuredOutput tool call, which is why judge calls allow `--max-turns 3` while still having no external tools). The fallback parser is kept as a belt-and-braces path for schemaless calls.
+
+**Failure containment**: a failed judge call marks the monitor `error` and does *not* mark items seen, so they're re-judged next tick. A failed swarm agent doesn't sink the run — synthesis proceeds with the survivors, and the pane shows the error. Every invocation carries a hard `--max-budget-usd` cap, so a runaway agent is bounded in dollars, not just in turns and seconds.
 
 ## Design decisions & trade-offs
 
@@ -76,6 +79,11 @@ Both paths acquire the **same global `asyncio.Semaphore(4)`**. That one primitiv
 **Per-message streaming, not `--include-partial-messages`.** Each assistant turn and tool call is already a lively progress event; token-level streaming would triple the parser complexity for cosmetics.
 
 **Vanilla JS frontend served by FastAPI.** One HTML file, one JS file, one SSE connection, vendored marked.js. No build step means `git clone && ./run.sh` is the entire setup.
+
+**Options researched and rejected.**
+- `--bare` mode is Anthropic's recommended flag for scripted `claude -p` calls (skips hooks/plugins/CLAUDE.md discovery, faster and deterministic) — but bare mode skips OAuth/keychain auth and requires `ANTHROPIC_API_KEY`, while this app targets machines authenticated via Claude subscription login. `--no-session-persistence` keeps runs stateless instead.
+- The **Claude Agent SDK** (Python package) would be the production way to embed this — native message objects, structured outputs, no subprocess parsing. The assignment mandates `claude -p` as the runtime, and the subprocess boundary does buy something real: agent crashes/timeouts/budget caps are process-level and can never take the app down.
+- `--include-partial-messages` (token-level streaming) — per-message events already make a lively live view; token deltas would triple parser complexity for cosmetics.
 
 ## Stubbed / what I'd do next
 
